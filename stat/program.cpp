@@ -1,20 +1,24 @@
 #include <iostream>
 #include <stdio.h>
 #include "statarray.cuh"
-
-
+#include <thrust/iterator/counting_iterator.h>
 
 
 int main()
 {
-	polynomial v(4, std::vector<float>({1,2,3}));
-	polynomial v2(4, std::vector<float>({ -1, -2,-4 }));
-
-	std::shared_ptr<polynomial> v3 = v + v2;
-	for (int i = 0; i <= v3->degree; i++)
+	statarray a1("a1");
+	statarray a2("a2");
+	thrust::counting_iterator<float> i1(10);
+	for(int i = 0; i < 10; i++)
 	{
-		std::cout << (*v3)[i] << std::endl;
+		a1.push_back(i1[i]);
+		a2.push_back(i1[i+5]);
 	}
+
+	print(a1);
+	print(a2);
+
+	print(*(a1 / a2));
 
 	return EXIT_SUCCESS;
 }
