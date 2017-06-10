@@ -70,6 +70,10 @@ public:
 	statarray() :vector() {}
 	explicit statarray(std::string name) :vector(), name(name) {}
 	statarray(float f) :statarray() { this->push_back(f); }
+	statarray(const_iterator begin, const_iterator end) :vector(begin, end) {}
+
+
+	virtual std::shared_ptr<statarray> rep(int nelements) const;
 
 //	static std::shared_ptr<statarray> rnorm(int n);
 //	static std::shared_ptr<statarray> randint(int n, int minvalue = INT_MIN, int maxvalue = INT_MAX);

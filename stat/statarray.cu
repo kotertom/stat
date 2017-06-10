@@ -70,6 +70,20 @@ std::shared_ptr<polynomial> polynomial::operator-(const polynomial& other) const
 //{
 //}
 
+
+std::shared_ptr<statarray> statarray::rep(int nelements) const
+{
+	if(this->size() > nelements)
+	{
+		return std::make_shared<statarray>(this->begin(),this->begin()+(nelements-1));
+	}
+	else if(this->size() < nelements)
+	{
+		//TODO
+//		return std::make_shared<statarray>(this->begin(), this->end()).
+	}
+}
+
 std::shared_ptr<statarray> statarray::operator[](const vector<int>& ids) const
 {
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>("");
