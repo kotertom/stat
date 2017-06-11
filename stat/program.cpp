@@ -17,7 +17,7 @@ int main()
 	thrust::counting_iterator<float> i1(10);
 	statarray a1("a1");
 	statarray a2("a2");
-	for(int i = 0; i < 1000000; i++)
+	for(int i = 0; i < 1e8; i++)
 	{
 		a1.push_back(i1[i-10]);
 		a2.push_back(i1[i+5]);
@@ -61,9 +61,13 @@ int main()
 
 	a3->to_csv("a3.csv");
 
-	std::shared_ptr<statarray> a4 = std::make_shared<statarray>()->from_csv("a3.csv");
+	std::shared_ptr<statarray> a4 = statarray::from_csv("a3.csv");
 
 	print(*a4);
+
+	print(*a4->winsorized(0.25f));
+
+	statarray::range(0, 1e10);
 
 	return EXIT_SUCCESS;
 }

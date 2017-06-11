@@ -11,6 +11,10 @@
 #include <thrust/extrema.h>
 #include <algorithm>
 #include <fstream>
+#include <curand_kernel.h>
+#include <ctime>
+#include <thrust/random.h>
+#include <thrust/random/normal_distribution.h>
 
 std::shared_ptr<polynomial> polynomial::operator+(const polynomial& other) const
 {
@@ -60,18 +64,112 @@ std::shared_ptr<polynomial> polynomial::operator-(const polynomial& other) const
 //{
 //}
 
+struct rnorm_functor : thrust::unary_function<int, float>
+{
+	float mean, stdev;
+	__host__ __device__
+	rnorm_functor(float mean, float stdev) :mean(mean), stdev(stdev) {}
 
-//std::shared_ptr<statarray> statarray::rnorm(int n)
-//{
-//}
-//
-//std::shared_ptr<statarray> statarray::randint(int n, int minvalue, int maxvalue)
-//{
-//}
-//
-//std::shared_ptr<statarray> statarray::randfloat(int n, float minvalue, float maxvalue)
-//{
-//}
+	__host__ __device__
+	float operator()(const unsigned int n) const
+	{
+		thrust::default_random_engine rng;
+		thrust::normal_distribution<float> dist(mean, stdev);
+		rng.discard(n);
+
+		return dist(rng);
+	}
+};
+
+std::shared_ptr<statarray> statarray::rnorm(int n, float mean, float stdev)
+{
+	thrust::device_vector<float> dnumbers(n);
+	thrust::counting_iterator<int> i(0);
+
+	thrust::transform(i, i + n, dnumbers.begin(), rnorm_functor(mean, stdev));
+
+	std::shared_ptr<statarray> ret = std::make_shared<statarray>();
+	ret->resize(n);
+
+	thrust::copy(dnumbers.begin(), dnumbers.end(), ret->begin());
+
+	return ret;
+}
+
+
+struct runif_int_functor : thrust::unary_function<int, int>
+{
+	int a, b;
+	__host__ __device__
+		runif_int_functor(int a, int b) :a(a), b(b) {}
+
+	__host__ __device__
+		float operator()(const unsigned int n) const
+	{
+		thrust::default_random_engine rng;
+		thrust::uniform_int_distribution<int> dist(a, b);
+		rng.discard(n);
+
+		return dist(rng);
+	}
+};
+
+std::shared_ptr<statarray> statarray::randint(int n, int minvalue, int maxvalue)
+{
+	thrust::device_vector<float> dnumbers(n);
+	thrust::counting_iterator<int> i(0);
+
+	thrust::transform(i, i + n, dnumbers.begin(), runif_int_functor(minvalue, maxvalue));
+
+	std::shared_ptr<statarray> ret = std::make_shared<statarray>();
+	ret->resize(n);
+
+	thrust::copy(dnumbers.begin(), dnumbers.end(), ret->begin());
+
+	return ret;
+}
+
+struct runif_float_functor : thrust::unary_function<int, float>
+{
+	float a, b;
+	__host__ __device__
+		runif_float_functor(float a, float b) :a(a), b(b) {}
+
+	__host__ __device__
+		float operator()(const unsigned int n) const
+	{
+		thrust::default_random_engine rng;
+		thrust::uniform_real_distribution<float> dist(a, b);
+		rng.discard(n);
+
+		return dist(rng);
+	}
+};
+
+std::shared_ptr<statarray> statarray::randfloat(int n, float minvalue, float maxvalue)
+{
+	thrust::device_vector<float> dnumbers(n);
+	thrust::counting_iterator<int> i(0);
+
+	thrust::transform(i, i + n, dnumbers.begin(), runif_float_functor(minvalue, maxvalue));
+
+	std::shared_ptr<statarray> ret = std::make_shared<statarray>();
+	ret->resize(n);
+
+	thrust::copy(dnumbers.begin(), dnumbers.end(), ret->begin());
+
+	return ret;
+}
+
+std::shared_ptr<statarray> statarray::range(int low_incl, int high_excl)
+{
+	thrust::counting_iterator<float> i(low_incl);
+	thrust::device_vector<float> d(i, i + high_excl - low_incl);
+	std::shared_ptr<statarray> ret = std::make_shared<statarray>();
+	ret->resize(high_excl - low_incl);
+	thrust::copy_n(d.begin(), ret->size(), ret->begin());
+	return ret;
+}
 
 
 std::shared_ptr<statarray> statarray::rep(int nelements) const
@@ -652,7 +750,7 @@ float statarray::geometric_mean() const
 	return powf(this->product(), 1.0 / this->size());
 }
 
-float statarray::generalized_mean(int k) const
+float statarray::generalized_mean(float p) const
 {
 	//TODO: implement
 	return 0;
@@ -660,12 +758,27 @@ float statarray::generalized_mean(int k) const
 
 float statarray::winsorized_mean(int nleft, int nright) const
 {
+	if (nright < 0) nright = nleft;
+	float l = this->at(nleft);
+	float r = this->at(this->size() - nright - 1);
+
+	thrust::constant_iterator<float> il(l);
+	thrust::constant_iterator<float> ir(r);
+
+	statarray temp(this->begin(), this->end());
+
+	thrust::copy_n(il, nleft, temp.begin());
+	thrust::copy_n(ir, nright, temp.end() - nright);
+
+	return temp.mean();
 }
 
 float statarray::winsorized_mean(float fraction_left, float fraction_right) const
 {
-	//TODO: implement
-	return 0;
+	int nleft = floor(fraction_left * this->size());
+	int nright = floor(fraction_right * this->size());
+
+	return this->winsorized_mean(nleft, nright);
 }
 
 float statarray::truncated_mean(float fraction_left, float fraction_right) const
@@ -704,6 +817,31 @@ std::shared_ptr<statarray> statarray::standardized() const
 	return *(*this - this->mean()) / this->stdev();
 }
 
+std::shared_ptr<statarray> statarray::winsorized(int nleft, int nright) const
+{
+	if (nright < 0) nright = nleft;
+	float l = this->at(nleft);
+	float r = this->at(this->size() - nright - 1);
+
+	thrust::constant_iterator<float> il(l);
+	thrust::constant_iterator<float> ir(r);
+
+	statarray temp(this->begin(), this->end());
+
+	thrust::copy_n(il, nleft, temp.begin());
+	thrust::copy_n(ir, nright, temp.end() - nright);
+
+	return std::make_shared<statarray>(temp);
+}
+
+std::shared_ptr<statarray> statarray::winsorized(float fraction_left, float fraction_right) const
+{
+	int nleft = floor(fraction_left * this->size());
+	int nright = floor(fraction_right * this->size());
+
+	return this->winsorized(nleft, nright);
+}
+
 std::shared_ptr<std::vector<int>> statarray::histogram(int nbins) const
 {
 	//TODO: implement
@@ -730,22 +868,23 @@ void statarray::to_csv(std::string filename) const
 
 std::shared_ptr<statarray> statarray::from_csv(std::string filename)
 {
+	std::shared_ptr<statarray> ret = std::make_shared<statarray>();
 	std::ifstream incsv;
 	std::string line;
 	incsv.open(filename, std::ios::in);
-	incsv >> this->name;
+	incsv >> ret->name;
 	
 	float temp;
 	while(!incsv.eof())
 	{
 		incsv >> temp;
-		this->push_back(temp);
+		ret->push_back(temp);
 	}
-	this->pop_back();
+	ret->pop_back();
 
-	this->shrink_to_fit();
+	ret->shrink_to_fit();
 
-	return std::make_shared<statarray>(*this);
+	return ret;
 }
 
 float correlation(const statarray& v1, const statarray& v2)
