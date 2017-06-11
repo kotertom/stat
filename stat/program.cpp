@@ -11,7 +11,7 @@ int main()
 	thrust::counting_iterator<float> i1(10);
 	for(int i = 0; i < 10; i++)
 	{
-		a1.push_back(i1[i]);
+		a1.push_back(i1[i-10]);
 		a2.push_back(i1[i+5]);
 	}
 
@@ -19,6 +19,10 @@ int main()
 	print(a2);
 
 	print(*(a1 / a2));
+	printf("%f\n", (a1 + a2)->sum());
+	printf("%f\n", (a1 + a2)->mean());
+
+	print(*(a1^2));
 
 	return EXIT_SUCCESS;
 }

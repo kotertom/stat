@@ -8,6 +8,8 @@
 #include <thrust/device_vector.h>
 #include <thrust/host_vector.h>
 #include <thrust/functional.h>
+#include <thrust/extrema.h>
+#include <algorithm>
 
 std::shared_ptr<polynomial> polynomial::operator+(const polynomial& other) const
 {
@@ -79,9 +81,16 @@ std::shared_ptr<statarray> statarray::rep(int nelements) const
 	}
 	else if(this->size() < nelements)
 	{
-		//TODO
-//		return std::make_shared<statarray>(this->begin(), this->end()).
+		std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->begin(), this->end());
+		ret->reserve(nelements);
+		while(ret->size() < nelements)
+		{
+			ret->insert(ret->end(), ret->begin(), ret->end());
+		}
+		ret->shrink_to_fit();
+		return ret;
 	}
+	return std::make_shared<statarray>(this->begin(), this->end());
 }
 
 std::shared_ptr<statarray> statarray::operator[](const vector<int>& ids) const
@@ -112,28 +121,12 @@ std::shared_ptr<statarray> statarray::operator[](const statarray& predicate_vect
 	return ret;
 }
 
-//
-//std::shared_ptr<statarray> statarray::operator*(float f) const
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::multiplies<float>());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("*f"));
-//	ret->reserve(this->size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
 std::shared_ptr<statarray> statarray::operator*(const statarray& other) const
 {
 	thrust::device_vector<float> d1 = *this;
 	thrust::device_vector<float> d2 = other;
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::multiplies<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::multiplies<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("*").append(other.get_name()));
 	ret->resize(this->size());
@@ -143,27 +136,12 @@ std::shared_ptr<statarray> statarray::operator*(const statarray& other) const
 	return ret;
 }
 
-//std::shared_ptr<statarray> statarray::operator+(float f) const
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::multiplies<float>());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+f"));
-//	ret->reserve(this->size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
 std::shared_ptr<statarray> statarray::operator+(const statarray& other) const
 {
 	thrust::device_vector<float> d1 = *this;
 	thrust::device_vector<float> d2 = other;
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::plus<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::plus<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+").append(other.get_name()));
 	ret->resize(this->size());
@@ -173,27 +151,12 @@ std::shared_ptr<statarray> statarray::operator+(const statarray& other) const
 	return ret;
 }
 
-//std::shared_ptr<statarray> statarray::operator-(float f) const
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::minus<float>());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("-f"));
-//	ret->reserve(this->size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
 std::shared_ptr<statarray> statarray::operator-(const statarray& other) const
 {
 	thrust::device_vector<float> d1 = *this;
 	thrust::device_vector<float> d2 = other;
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::minus<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::minus<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("-").append(other.get_name()));
 	ret->resize(this->size());
@@ -203,27 +166,12 @@ std::shared_ptr<statarray> statarray::operator-(const statarray& other) const
 	return ret;
 }
 
-//std::shared_ptr<statarray> statarray::operator/(float f) const
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::divides<float>());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("/f"));
-//	ret->reserve(this->size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
 std::shared_ptr<statarray> statarray::operator/(const statarray& other) const
 {
 	thrust::device_vector<float> d1 = *this;
 	thrust::device_vector<float> d2 = other;
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::divides<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::divides<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("/").append(other.get_name()));
 	ret->resize(this->size());
@@ -245,12 +193,13 @@ struct power_functor
 
 std::shared_ptr<statarray> statarray::operator^(const statarray& other) const
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), power_functor());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), power_functor());
 
-	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+").append(other.get_name()));
+	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("^").append(other.get_name()));
 	ret->resize(this->size());
 
 	thrust::copy(d1.begin(), d1.end(), ret->begin());
@@ -265,57 +214,6 @@ std::shared_ptr<statarray> statarray::operator^(const statarray& other) const
 //
 //}
 
-//std::shared_ptr<statarray> operator*(const float& f, const statarray& right)
-//{
-//	thrust::device_vector<float> d1 = right;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::multiplies<float>());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+").append(other.get_name()));
-//	ret->reserve(right.size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
-//std::shared_ptr<statarray> operator+(const float& f, const statarray& right)
-//{
-//	thrust::device_vector<float> d1 = right;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::plus<float>());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+").append(other.get_name()));
-//	ret->reserve(right.size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
-
-
-//std::shared_ptr<statarray> operator-(const float& f, const statarray& right)
-//{
-//	thrust::device_vector<float> d1 = right;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(thrust::make_transform_iterator(d1.begin(), thrust::negate<float>()), 
-//		thrust::make_transform_iterator(d1.end(), thrust::negate<float>()),
-//		fiterator, 
-//		d1.begin(), 
-//		thrust::plus<float>()
-//	);
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+").append(other.get_name()));
-//	ret->reserve(right.size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
 
 struct mirror_div_func
 {
@@ -326,21 +224,6 @@ struct mirror_div_func
 	}
 };
 
-//std::shared_ptr<statarray> operator/(const float& f, const statarray& right)
-//{
-//	thrust::device_vector<float> d1 = right;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), mirror_div_func());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+").append(other.get_name()));
-//	ret->reserve(right.size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
 struct mirror_pow_func
 {
 	__host__ __device__
@@ -350,26 +233,11 @@ struct mirror_pow_func
 	}
 };
 
-//std::shared_ptr<statarray> operator^(const float& f, const statarray& right)
-//{
-//	thrust::device_vector<float> d1 = right;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), mirror_pow_func());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+").append(other.get_name()));
-//	ret->reserve(right.size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
 std::shared_ptr<statarray> statarray::operator-() const
 {
 	thrust::device_vector<float> d1 = *this;
 
-	transform(d1.begin(), d1.end(), d1.begin(), thrust::negate<float>());
+	thrust::transform(d1.begin(), d1.end(), d1.begin(), thrust::negate<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(std::string("-").append(this->get_name()));
 	ret->resize(this->size());
@@ -377,6 +245,13 @@ std::shared_ptr<statarray> statarray::operator-() const
 	thrust::copy(d1.begin(), d1.end(), ret->begin());
 
 	return ret;
+}
+
+float statarray::product() const
+{
+	thrust::device_vector<float> d = *this;
+
+	return thrust::reduce(d.begin(), d.end(), 1, thrust::multiplies<float>());
 }
 
 //std::shared_ptr<polynomial> polynomial::operator-=(const polynomial& other)
@@ -395,37 +270,14 @@ std::shared_ptr<statarray> statarray::operator-() const
 //{
 //}
 
-//std::shared_ptr<statarray> operator<(const float& f, const statarray& right)
-//{
-//	return right > f;
-//}
-//
-//std::shared_ptr<statarray> operator>(const float& f, const statarray& right)
-//{
-//	return right < f;
-//}
-//
-//std::shared_ptr<statarray> operator<=(const float& f, const statarray& right)
-//{
-//	return right >= f;
-//}
-//
-//std::shared_ptr<statarray> operator>=(const float& f, const statarray& right)
-//{
-//	return right <= f;
-//}
-//
-//std::shared_ptr<statarray> operator==(const float& f, const statarray& right)
-//{
-//	return right == f;
-//}
 
 std::shared_ptr<statarray> statarray::operator<(const statarray& other) const
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::less<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::less<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("<").append(other.get_name()));
 	ret->resize(this->size());
@@ -435,27 +287,13 @@ std::shared_ptr<statarray> statarray::operator<(const statarray& other) const
 	return ret;
 }
 
-//std::shared_ptr<statarray> statarray::operator<=(float f) const
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::less_equal<float>());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+").append(other.get_name()));
-//	ret->reserve(this->size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
 std::shared_ptr<statarray> statarray::operator<=(const statarray& other) const
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::less_equal<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::less_equal<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("<=").append(other.get_name()));
 	ret->resize(this->size());
@@ -465,27 +303,13 @@ std::shared_ptr<statarray> statarray::operator<=(const statarray& other) const
 	return ret;
 }
 
-//std::shared_ptr<statarray> statarray::operator>=(float f) const
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::greater_equal<float>());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+").append(other.get_name()));
-//	ret->reserve(this->size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
 std::shared_ptr<statarray> statarray::operator>=(const statarray& other) const
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::greater_equal<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::greater_equal<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append(">=").append(other.get_name()));
 	ret->resize(this->size());
@@ -495,27 +319,13 @@ std::shared_ptr<statarray> statarray::operator>=(const statarray& other) const
 	return ret;
 }
 
-//std::shared_ptr<statarray> statarray::operator>(float f) const
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::greater<float>());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+").append(other.get_name()));
-//	ret->reserve(this->size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
 std::shared_ptr<statarray> statarray::operator>(const statarray& other) const
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::greater<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::greater<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append(">").append(other.get_name()));
 	ret->resize(this->size());
@@ -525,27 +335,13 @@ std::shared_ptr<statarray> statarray::operator>(const statarray& other) const
 	return ret;
 }
 
-//std::shared_ptr<statarray> statarray::operator==(float f) const
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::equal_to<float>());
-//
-//	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("+").append(other.get_name()));
-//	ret->reserve(this->size());
-//
-//	thrust::copy(d1.begin(), d1.end(), ret->begin());
-//
-//	return ret;
-//}
-
 std::shared_ptr<statarray> statarray::operator==(const statarray& other) const
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::equal_to<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::equal_to<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("==").append(other.get_name()));
 	ret->resize(this->size());
@@ -555,120 +351,65 @@ std::shared_ptr<statarray> statarray::operator==(const statarray& other) const
 	return ret;
 }
 
-//std::shared_ptr<statarray> statarray::operator*=(float f)
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::multiplies<float>());
-//
-//	thrust::copy(d1.begin(), d1.end(), this->begin());
-//
-//	return std::make_shared<statarray>(*this);
-//}
-
 std::shared_ptr<statarray> statarray::operator*=(const statarray& other)
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::multiplies<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::multiplies<float>());
 
 	thrust::copy(d1.begin(), d1.end(), this->begin());
 
 	return std::make_shared<statarray>(*this);
 }
-
-//std::shared_ptr<statarray> statarray::operator+=(float f)
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::plus<float>());
-//
-//	thrust::copy(d1.begin(), d1.end(), this->begin());
-//
-//	return std::make_shared<statarray>(*this);
-//}
 
 std::shared_ptr<statarray> statarray::operator+=(const statarray& other)
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::plus<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::plus<float>());
 
 	thrust::copy(d1.begin(), d1.end(), this->begin());
 
 	return std::make_shared<statarray>(*this);
 }
-
-//std::shared_ptr<statarray> statarray::operator-=(float f)
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::minus<float>());
-//
-//	thrust::copy(d1.begin(), d1.end(), this->begin());
-//
-//	return std::make_shared<statarray>(*this);
-//}
 
 std::shared_ptr<statarray> statarray::operator-=(const statarray& other)
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::minus<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::minus<float>());
 
 	thrust::copy(d1.begin(), d1.end(), this->begin());
 
 	return std::make_shared<statarray>(*this);
 }
-
-//std::shared_ptr<statarray> statarray::operator/=(float f)
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), thrust::divides<float>());
-//
-//	thrust::copy(d1.begin(), d1.end(), this->begin());
-//
-//	return std::make_shared<statarray>(*this);
-//}
 
 std::shared_ptr<statarray> statarray::operator/=(const statarray& other)
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::divides<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::divides<float>());
 
 	thrust::copy(d1.begin(), d1.end(), this->begin());
 
 	return std::make_shared<statarray>(*this);
 }
 
-//std::shared_ptr<statarray> statarray::operator^=(float f)
-//{
-//	thrust::device_vector<float> d1 = *this;
-//	thrust::constant_iterator<float> fiterator(f);
-//
-//	transform(d1.begin(), d1.end(), fiterator, d1.begin(), power_functor());
-//
-//	thrust::copy(d1.begin(), d1.end(), this->begin());
-//
-//	return std::make_shared<statarray>(*this);
-//}
-
 std::shared_ptr<statarray> statarray::operator^=(const statarray& other)
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), power_functor());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), power_functor());
 
 	thrust::copy(d1.begin(), d1.end(), this->begin());
 
@@ -677,10 +418,11 @@ std::shared_ptr<statarray> statarray::operator^=(const statarray& other)
 
 std::shared_ptr<statarray> statarray::operator|(const statarray& other) const
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::logical_or<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::logical_or<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("|").append(other.get_name()));
 	ret->resize(this->size());
@@ -692,10 +434,11 @@ std::shared_ptr<statarray> statarray::operator|(const statarray& other) const
 
 std::shared_ptr<statarray> statarray::operator&(const statarray& other) const
 {
-	thrust::device_vector<float> d1 = *this;
-	thrust::device_vector<float> d2 = other;
+	int size = std::max(this->size(), other.size());
+	thrust::device_vector<float> d1 = *this->rep(size);
+	thrust::device_vector<float> d2 = *other.rep(size);
 
-	transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::logical_and<float>());
+	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), thrust::logical_and<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(this->get_name().append("&").append(other.get_name()));
 	ret->resize(this->size());
@@ -709,7 +452,7 @@ std::shared_ptr<statarray> statarray::operator!() const
 {
 	thrust::device_vector<float> d1 = *this;
 
-	transform(d1.begin(), d1.end(), d1.begin(), thrust::logical_not<float>());
+	thrust::transform(d1.begin(), d1.end(), d1.begin(), thrust::logical_not<float>());
 
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>(std::string("1").append(this->get_name()));
 	ret->resize(this->size());
@@ -722,26 +465,34 @@ std::shared_ptr<statarray> statarray::operator!() const
 //std::shared_ptr<statarray> statarray::sample(int n) const
 //{
 //}
-//
-//std::shared_ptr<statarray> statarray::sort(sortorder order)
-//{
-//}
-//
-//std::shared_ptr<statarray> statarray::sorted(sortorder order) const
-//{
-//}
-//
+
+std::shared_ptr<statarray> statarray::sort(sortorder order)
+{
+	thrust::swap(*this, *this->sorted(order));
+	return std::make_shared<statarray>(*this);
+}
+
+std::shared_ptr<statarray> statarray::sorted(sortorder order) const
+{
+	//TODO: implement
+	return nullptr;
+}
+
 //std::shared_ptr<std::vector<int>> statarray::order(sortorder order) const
 //{
 //}
 //
-//float statarray::sum() const
-//{
-//}
-//
-//float statarray::mean() const
-//{
-//}
+float statarray::sum() const
+{
+	thrust::device_vector<float> d(this->begin(), this->end());
+
+	return thrust::reduce(d.begin(), d.end(), 0, thrust::plus<float>());
+}
+
+float statarray::mean() const
+{
+	return this->sum() / this->size();
+}
 //
 //float statarray::mode() const
 //{
@@ -750,51 +501,76 @@ std::shared_ptr<statarray> statarray::operator!() const
 //float statarray::iqm() const
 //{
 //}
-//
-//float statarray::min() const
-//{
-//}
-//
-//float statarray::max() const
-//{
-//}
-//
-//float statarray::median() const
-//{
-//}
-//
-//float statarray::lquart() const
-//{
-//}
-//
-//float statarray::uquart() const
-//{
-//}
-//
-//float statarray::quantile(float q) const
-//{
-//}
-//
-//float statarray::iqr() const
-//{
-//}
-//
-//float statarray::stdev() const
-//{
-//}
-//
-//float statarray::variance() const
-//{
-//}
-//
-//float statarray::skewness() const
-//{
-//}
-//
-//float statarray::kurtosis() const
-//{
-//}
-//
+
+float statarray::min() const
+{
+	thrust::device_vector<float> d(this->begin(), this->end());
+
+	return *thrust::min_element(d.begin(), d.end());
+}
+
+float statarray::max() const
+{
+	thrust::device_vector<float> d(this->begin(), this->end());
+
+	return *thrust::max_element(d.begin(), d.end());
+}
+
+float statarray::median() const
+{
+	return this->quantile(0.5);
+}
+
+float statarray::lquart() const
+{
+	return this->quantile(0.25);
+}
+
+float statarray::uquart() const
+{
+	return this->quantile(0.75);
+}
+
+float statarray::quantile(float q) const
+{
+	q = std::min<float>(1, std::max<float>(0, q));
+	std::shared_ptr<statarray> sorted = this->sorted();
+	int before = floor(q * this->size());
+	int after = floor((1 - q) * this->size());
+
+	return ((*sorted)[before] + (*sorted)[this->size() - after - 1]) * 0.5;
+}
+
+float statarray::iqr() const
+{
+	return this->uquart() - this->lquart();
+}
+
+float statarray::expected_value() const
+{
+	return this->mean();
+}
+
+float statarray::stdev() const
+{
+	return sqrt(this->variance());
+}
+
+float statarray::variance() const
+{
+	return (*this ^ 2)->expected_value() - pow(this->expected_value(), 2);
+}
+
+float statarray::skewness() const
+{
+	return 3 * (this->mean() - this->median()) / this->stdev();
+}
+
+float statarray::kurtosis() const
+{
+	return (*(*this - this->expected_value()) ^ 4)->expected_value();
+}
+
 //float statarray::covariance(const statarray& other) const
 //{
 //}
@@ -802,15 +578,17 @@ std::shared_ptr<statarray> statarray::operator!() const
 //float statarray::correlation(const statarray& other) const
 //{
 //}
-//
-//float statarray::harmonic_mean() const
-//{
-//}
-//
-//float statarray::geometric_mean(int k) const
-//{
-//}
-//
+
+float statarray::harmonic_mean() const
+{
+	return float(this->size()) / ((*this) ^ (-1))->sum();
+}
+
+float statarray::geometric_mean() const
+{
+	return powf(this->product(), 1.0 / this->size());
+}
+
 //float statarray::generalized_mean(int k) const
 //{
 //}
@@ -861,6 +639,58 @@ std::shared_ptr<statarray> statarray::operator!() const
 //
 //std::shared_ptr<polynomial> least_squares(const statarray& v1, const statarray& v2)
 //{
+//}
+
+//std::shared_ptr<statarray> statarray::transform(const statarray& v, const thrust::binary_function<float, float, float>& binary_functor) const
+//{
+//	thrust::device_vector<float> d1(this->begin(), this->end());
+//	thrust::device_vector<float> d2(v.begin(), v.end());
+//
+//	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), binary_functor);
+//
+//	std::shared_ptr<statarray> ret = std::make_shared<statarray>();
+//	ret->resize(this->size());
+//
+//	thrust::copy(d1.begin(), d1.end(), ret->begin());
+//
+//	return ret;
+//}
+//
+//std::shared_ptr<statarray> statarray::transform(const thrust::unary_function<float, float>& unary_functor) const
+//{
+//	thrust::device_vector<float> d(this->begin(), this->end());
+//
+//	thrust::transform(d.begin(), d.end(), d.begin(),unary_functor);
+//
+//	std::shared_ptr<statarray> ret = std::make_shared<statarray>();
+//	ret->resize(this->size());
+//
+//	thrust::copy(d.begin(), d.end(), ret->begin());
+//
+//	return ret;
+//}
+//
+//std::shared_ptr<statarray> statarray::transform_modify(const statarray& v, const thrust::binary_function<float, float, float>& binary_functor)
+//{
+//	thrust::device_vector<float> d1(this->begin(), this->end());
+//	thrust::device_vector<float> d2(v.begin(), v.end());
+//
+//	thrust::transform(d1.begin(), d1.end(), d2.begin(), d1.begin(), binary_functor);
+//
+//	thrust::copy(d1.begin(), d1.end(), this->begin());
+//
+//	return std::make_shared<statarray>(*this);
+//}
+//
+//std::shared_ptr<statarray> statarray::transform_modify(const thrust::unary_function<float,float>& unary_functor)
+//{
+//	thrust::device_vector<float> d(this->begin(), this->end());
+//
+//	thrust::transform(d.begin(), d.end(), d.begin(), unary_functor);
+//
+//	thrust::copy(d.begin(), d.end(), this->begin());
+//
+//	return std::make_shared<statarray>(*this);
 //}
 
 std::shared_ptr<std::vector<bool>> or(std::vector<bool>& v1, std::vector<bool>& v2)

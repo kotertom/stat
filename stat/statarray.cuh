@@ -1,4 +1,5 @@
 #include <memory>
+#include <thrust/functional.h>
 #ifndef STATARRAY_H
 #define STATARRAY_H
 
@@ -79,59 +80,26 @@ public:
 //	static std::shared_ptr<statarray> randint(int n, int minvalue = INT_MIN, int maxvalue = INT_MAX);
 //	static std::shared_ptr<statarray> randfloat(int n, float minvalue = 0, float maxvalue = 1);
 
+	virtual float& operator[](const int& i) { return this->at(i); }
 	virtual std::shared_ptr<statarray> operator[](const vector<int>& ids) const;
 	virtual std::shared_ptr<statarray> operator[](const statarray& predicate_vector) const;
  
-//	virtual std::shared_ptr<statarray> operator*(float f) const;
-//	friend std::shared_ptr<statarray> operator*(const float& f, const statarray& right);
 	virtual std::shared_ptr<statarray> operator*(const statarray& other) const;
- 
-//	virtual std::shared_ptr<statarray> operator+(float f) const;
-//	friend std::shared_ptr<statarray> operator+(const float& f, const statarray& right);
 	virtual std::shared_ptr<statarray> operator+(const statarray& other) const;
- 
-//	virtual std::shared_ptr<statarray> operator-(float f) const;
-//	friend std::shared_ptr<statarray> operator-(const float& f, const statarray& right);
 	virtual std::shared_ptr<statarray> operator-(const statarray& other) const;
-
-//	virtual std::shared_ptr<statarray> operator/(float f) const;
-//	friend std::shared_ptr<statarray> operator/(const float& f, const statarray& right);
 	virtual std::shared_ptr<statarray> operator/(const statarray& other) const;
-
-//	virtual std::shared_ptr<statarray> operator^(float f) const;
-//	friend std::shared_ptr<statarray> operator^(const float& f, const statarray& right);
 	virtual std::shared_ptr<statarray> operator^(const statarray& other) const;
  
-//	virtual std::shared_ptr<statarray> operator<(float f) const;
 	virtual std::shared_ptr<statarray> operator<(const statarray& other) const;
-//	virtual std::shared_ptr<statarray> operator<=(float f) const;
 	virtual std::shared_ptr<statarray> operator<=(const statarray& other) const;
-//	virtual std::shared_ptr<statarray> operator>=(float f) const;
 	virtual std::shared_ptr<statarray> operator>=(const statarray& other) const;
-//	virtual std::shared_ptr<statarray> operator>(float f) const;
 	virtual std::shared_ptr<statarray> operator>(const statarray& other) const;
-//	virtual std::shared_ptr<statarray> operator==(float f) const;
 	virtual std::shared_ptr<statarray> operator==(const statarray& other) const;
 
-//	friend std::shared_ptr<statarray> operator<(const float& f, const statarray& right);
-//	friend std::shared_ptr<statarray> operator>(const float& f, const statarray& right);
-//	friend std::shared_ptr<statarray> operator<=(const float& f, const statarray& right);
-//	friend std::shared_ptr<statarray> operator>=(const float& f, const statarray& right);
-//	friend std::shared_ptr<statarray> operator==(const float& f, const statarray& right);
-
-//	virtual std::shared_ptr<statarray> operator*=(float f);
-	virtual std::shared_ptr<statarray> operator*=(const statarray& other);
-												
-//	virtual std::shared_ptr<statarray> operator+=(float f);
-	virtual std::shared_ptr<statarray> operator+=(const statarray& other);
-												
-//	virtual std::shared_ptr<statarray> operator-=(float f);
+	virtual std::shared_ptr<statarray> operator*=(const statarray& other);										
+	virtual std::shared_ptr<statarray> operator+=(const statarray& other);												
 	virtual std::shared_ptr<statarray> operator-=(const statarray& other);
-												
-//	virtual std::shared_ptr<statarray> operator/=(float f);
 	virtual std::shared_ptr<statarray> operator/=(const statarray& other);
-												
-//	virtual std::shared_ptr<statarray> operator^=(float f);
 	virtual std::shared_ptr<statarray> operator^=(const statarray& other);
 
 	virtual std::shared_ptr<statarray> operator|(const statarray& other) const;
@@ -139,48 +107,56 @@ public:
 	virtual std::shared_ptr<statarray> operator!() const;
 
 	virtual std::shared_ptr<statarray> operator-() const;
+
+	virtual float product() const;
  
 //	virtual std::shared_ptr<statarray> sample(int n) const;
-//
-//	virtual std::shared_ptr<statarray> sort(sortorder order = ASC);
-//	virtual std::shared_ptr<statarray> sorted(sortorder order = ASC) const;
+
+	virtual std::shared_ptr<statarray> sort(sortorder order = ASC);
+	virtual std::shared_ptr<statarray> sorted(sortorder order = ASC) const;
 //	virtual std::shared_ptr<vector<int>> order(sortorder order = ASC) const;
-//
-//	virtual float sum() const;
-//	virtual float mean() const;
+
+	virtual float sum() const;
+	virtual float mean() const;
 //	virtual float mode() const;
 //	virtual float iqm() const;
-//	virtual float min() const;
-//	virtual float max() const;
-//	virtual float median() const;
-//	virtual float lquart() const;
-//	virtual float uquart() const;
-//	virtual float quantile(float q) const;
-//	virtual float iqr() const;
-//	virtual float stdev() const;
-//	virtual float variance() const;
-//	virtual float skewness() const;
-//	virtual float kurtosis() const;
+	virtual float min() const;
+	virtual float max() const;
+	virtual float median() const;
+	virtual float lquart() const;
+	virtual float uquart() const;
+	virtual float quantile(float q) const;
+	virtual float iqr() const;
+	virtual float expected_value() const;
+	virtual float stdev() const;
+	virtual float variance() const;
+	virtual float skewness() const;
+	virtual float kurtosis() const;
 //	virtual float covariance(const statarray& other) const;
 //	virtual float correlation(const statarray& other) const;
-//	virtual float harmonic_mean() const;
-//	virtual float geometric_mean(int k) const;
+	virtual float harmonic_mean() const;
+	virtual float geometric_mean() const;
 //	virtual float generalized_mean(int k) const;
 //	virtual float winsorized_mean(float fraction) const;
 //	virtual float truncated_mean(float fraction) const;
 //	virtual float weighted_arithmetic_mean(const vector<float>& weights) const;
 //	virtual bool shapiro_wilk_test() const;
 //	virtual bool t_test() const;
-
+//
+//	virtual std::shared_ptr<statarray> transform(const statarray& v, const thrust::binary_function<float, float, float>& binary_functor) const;
+//	virtual std::shared_ptr<statarray> transform(const thrust::unary_function<float, float>& unary_functor) const;
+//	virtual std::shared_ptr<statarray> transform_modify(const statarray& v, const thrust::binary_function<float, float, float>& binary_functor);
+//	virtual std::shared_ptr<statarray> transform_modify(const thrust::unary_function<float, float>& unary_functor);
+//
 //	virtual std::shared_ptr<statarray> standardized() const;
 //
 //	virtual std::shared_ptr<vector<int>> histogram(int nbins) const;
 //
 //	virtual std::shared_ptr<polynomial> least_squares(const statarray& other) const;
-
+//
 //	virtual void to_csv(std::string filename) const;
 //	virtual void from_csv(std::string filename) const;
-
+//
 //	friend float correlation(const statarray& v1, const statarray& v2);
 //	friend std::shared_ptr<polynomial> least_squares(const statarray& v1, const statarray& v2);
 };
