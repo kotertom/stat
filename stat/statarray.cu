@@ -658,16 +658,24 @@ float statarray::generalized_mean(int k) const
 	return 0;
 }
 
-float statarray::winsorized_mean(float fraction) const
+float statarray::winsorized_mean(int nleft, int nright) const
+{
+}
+
+float statarray::winsorized_mean(float fraction_left, float fraction_right) const
 {
 	//TODO: implement
 	return 0;
 }
 
-float statarray::truncated_mean(float fraction) const
+float statarray::truncated_mean(float fraction_left, float fraction_right) const
 {
-	//TODO: implement
-	return 0;
+	return this->trimmed(fraction_left, fraction_right)->mean();
+}
+
+float statarray::truncated_mean(int nleft, int nright) const
+{
+	return this->trimmed(nleft, nright)->mean();
 }
 
 float statarray::weighted_arithmetic_mean(const vector<float>& weights) const

@@ -142,8 +142,10 @@ public:
 	virtual float harmonic_mean() const;
 	virtual float geometric_mean() const;
 	virtual float generalized_mean(int k) const;
-	virtual float winsorized_mean(float fraction) const;
-	virtual float truncated_mean(float fraction) const;
+	virtual float winsorized_mean(float fraction_left, float fraction_right = -1) const;
+	virtual float winsorized_mean(int nleft, int nright = -1) const;
+	virtual float truncated_mean(float fraction_left, float fraction_right = -1) const;
+	virtual float truncated_mean(int nleft, int nright = -1) const;
 	virtual float weighted_arithmetic_mean(const vector<float>& weights) const;
 	virtual bool shapiro_wilk_test() const;
 	virtual bool t_test() const;
