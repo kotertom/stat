@@ -163,6 +163,7 @@ public:
 	virtual std::shared_ptr<statarray> from_csv(std::string filename);
 
 	friend float correlation(const statarray& v1, const statarray& v2);
+	friend float covariance(const statarray& v1, const statarray& v2);
 	friend std::shared_ptr<polynomial> least_squares(const statarray& v1, const statarray& v2);
 };
 

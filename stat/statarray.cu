@@ -618,7 +618,8 @@ float statarray::stdev() const
 
 float statarray::variance() const
 {
-	return (*this ^ 2)->expected_value() - pow(this->expected_value(), 2);
+//	return (*this ^ 2)->expected_value() - pow(this->expected_value(), 2);
+	return (*(*this - this->mean()) ^ 2)->sum() / (this->size() - 1);
 }
 
 float statarray::skewness() const
@@ -633,14 +634,12 @@ float statarray::kurtosis() const
 
 float statarray::covariance(const statarray& other) const
 {
-	//TODO: implement
-	return 0;
+	return (*(*this - this->mean()) * *(other - other.mean()))->sum() / (this->size() - 1);
 }
 
 float statarray::correlation(const statarray& other) const
 {
-	//TODO: implement
-	return 0;
+	return this->covariance(other) / (this->stdev() * other.stdev());
 }
 
 float statarray::harmonic_mean() const
@@ -694,8 +693,7 @@ bool statarray::t_test() const
 
 std::shared_ptr<statarray> statarray::standardized() const
 {
-	//TODO: implement
-	return nullptr;
+	return *(*this - this->mean()) / this->stdev();
 }
 
 std::shared_ptr<std::vector<int>> statarray::histogram(int nbins) const
@@ -744,8 +742,12 @@ std::shared_ptr<statarray> statarray::from_csv(std::string filename)
 
 float correlation(const statarray& v1, const statarray& v2)
 {
-	//TODO: implement
-	return 0;
+	return v1.correlation(v2);
+}
+
+float covariance(const statarray& v1, const statarray& v2)
+{
+	return v1.covariance(v2);
 }
 
 std::shared_ptr<polynomial> least_squares(const statarray& v1, const statarray& v2)
