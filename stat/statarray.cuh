@@ -80,7 +80,7 @@ public:
 //	static std::shared_ptr<statarray> randint(int n, int minvalue = INT_MIN, int maxvalue = INT_MAX);
 //	static std::shared_ptr<statarray> randfloat(int n, float minvalue = 0, float maxvalue = 1);
 
-	virtual float& operator[](const int& i) { return this->at(i); }
+	virtual float& operator[](const int& i) { return *(this->begin() + i); }
 	virtual std::shared_ptr<statarray> operator[](const vector<int>& ids) const;
 	virtual std::shared_ptr<statarray> operator[](const statarray& predicate_vector) const;
  
@@ -110,7 +110,12 @@ public:
 
 	virtual float product() const;
  
-//	virtual std::shared_ptr<statarray> sample(int n) const;
+	virtual std::shared_ptr<statarray> sample(int n) const;
+
+	virtual std::shared_ptr<statarray> trim(float left, float right = -1);
+	virtual std::shared_ptr<statarray> trimmed(float left, float right = -1) const;
+	virtual std::shared_ptr<statarray> trim(int left, int right = -1);
+	virtual std::shared_ptr<statarray> trimmed(int left, int right = -1) const;
 
 	virtual std::shared_ptr<statarray> sort(sortorder order = ASC);
 	virtual std::shared_ptr<statarray> sorted(sortorder order = ASC) const;
@@ -118,8 +123,8 @@ public:
 
 	virtual float sum() const;
 	virtual float mean() const;
-//	virtual float mode() const;
-//	virtual float iqm() const;
+	virtual float mode() const;
+	virtual float iqm() const;
 	virtual float min() const;
 	virtual float max() const;
 	virtual float median() const;
@@ -132,33 +137,33 @@ public:
 	virtual float variance() const;
 	virtual float skewness() const;
 	virtual float kurtosis() const;
-//	virtual float covariance(const statarray& other) const;
-//	virtual float correlation(const statarray& other) const;
+	virtual float covariance(const statarray& other) const;
+	virtual float correlation(const statarray& other) const;
 	virtual float harmonic_mean() const;
 	virtual float geometric_mean() const;
-//	virtual float generalized_mean(int k) const;
-//	virtual float winsorized_mean(float fraction) const;
-//	virtual float truncated_mean(float fraction) const;
-//	virtual float weighted_arithmetic_mean(const vector<float>& weights) const;
-//	virtual bool shapiro_wilk_test() const;
-//	virtual bool t_test() const;
-//
+	virtual float generalized_mean(int k) const;
+	virtual float winsorized_mean(float fraction) const;
+	virtual float truncated_mean(float fraction) const;
+	virtual float weighted_arithmetic_mean(const vector<float>& weights) const;
+	virtual bool shapiro_wilk_test() const;
+	virtual bool t_test() const;
+
 //	virtual std::shared_ptr<statarray> transform(const statarray& v, const thrust::binary_function<float, float, float>& binary_functor) const;
 //	virtual std::shared_ptr<statarray> transform(const thrust::unary_function<float, float>& unary_functor) const;
 //	virtual std::shared_ptr<statarray> transform_modify(const statarray& v, const thrust::binary_function<float, float, float>& binary_functor);
 //	virtual std::shared_ptr<statarray> transform_modify(const thrust::unary_function<float, float>& unary_functor);
 //
-//	virtual std::shared_ptr<statarray> standardized() const;
-//
-//	virtual std::shared_ptr<vector<int>> histogram(int nbins) const;
-//
-//	virtual std::shared_ptr<polynomial> least_squares(const statarray& other) const;
-//
-//	virtual void to_csv(std::string filename) const;
-//	virtual void from_csv(std::string filename) const;
-//
-//	friend float correlation(const statarray& v1, const statarray& v2);
-//	friend std::shared_ptr<polynomial> least_squares(const statarray& v1, const statarray& v2);
+	virtual std::shared_ptr<statarray> standardized() const;
+
+	virtual std::shared_ptr<vector<int>> histogram(int nbins) const;
+
+	virtual std::shared_ptr<polynomial> least_squares(const statarray& other) const;
+
+	virtual void to_csv(std::string filename) const;
+	virtual std::shared_ptr<statarray> from_csv(std::string filename);
+
+	friend float correlation(const statarray& v1, const statarray& v2);
+	friend std::shared_ptr<polynomial> least_squares(const statarray& v1, const statarray& v2);
 };
 
 std::shared_ptr<std::vector<bool>> or(std::vector<bool>& v1, std::vector<bool>& v2);
