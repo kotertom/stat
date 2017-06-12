@@ -1,20 +1,6 @@
 #include "statarray.cuh"
 
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
 
-#include <thrust/transform.h>
-#include <thrust/reduce.h>
-#include <thrust/device_vector.h>
-#include <thrust/host_vector.h>
-#include <thrust/functional.h>
-#include <thrust/extrema.h>
-#include <algorithm>
-#include <fstream>
-#include <curand_kernel.h>
-#include <ctime>
-#include <thrust/random.h>
-#include <thrust/random/normal_distribution.h>
 
 std::shared_ptr<polynomial> polynomial::operator+(const polynomial& other) const
 {
@@ -163,11 +149,11 @@ std::shared_ptr<statarray> statarray::randfloat(int n, float minvalue, float max
 
 std::shared_ptr<statarray> statarray::range(int low_incl, int high_excl)
 {
-	thrust::counting_iterator<float> i(low_incl);
-	thrust::device_vector<float> d(i, i + high_excl - low_incl);
 	std::shared_ptr<statarray> ret = std::make_shared<statarray>();
 	ret->resize(high_excl - low_incl);
-	thrust::copy_n(d.begin(), ret->size(), ret->begin());
+	thrust::device_vector<float> d(ret->size());
+	thrust::sequence(d.begin(), d.end(), low_incl);
+	thrust::copy(d.begin(), d.end(), ret->begin());
 	return ret;
 }
 
@@ -602,8 +588,8 @@ std::shared_ptr<statarray> statarray::operator!() const
 
 std::shared_ptr<statarray> statarray::sample(int n) const
 {
-	//TODO: implement
-	return nullptr;
+	auto temp = this->randint(n, 0, this->size() - 1);
+	return (*this)[std::vector<int>(temp->begin(), temp->end())];
 }
 
 std::shared_ptr<statarray> statarray::sort(sortorder order)
@@ -614,7 +600,8 @@ std::shared_ptr<statarray> statarray::sort(sortorder order)
 
 std::shared_ptr<statarray> statarray::sorted(sortorder order) const
 {
-	thrust::device_vector<float> d = *this;
+	thrust::device_vector<float> d(this->size());
+	thrust::copy(this->begin(), this->end(), d.begin());
 	if(order == DESC)
 	{
 		thrust::sort(d.begin(), d.end(), thrust::greater<float>());
@@ -752,8 +739,7 @@ float statarray::geometric_mean() const
 
 float statarray::generalized_mean(float p) const
 {
-	//TODO: implement
-	return 0;
+	return powf((*this ^ p)->sum() / this->size(), 1 / p);
 }
 
 float statarray::winsorized_mean(int nleft, int nright) const
@@ -842,16 +828,58 @@ std::shared_ptr<statarray> statarray::winsorized(float fraction_left, float frac
 	return this->winsorized(nleft, nright);
 }
 
-std::shared_ptr<std::vector<int>> statarray::histogram(int nbins) const
+
+struct histogram_functor : thrust::unary_function<float, float>
 {
-	//TODO: implement
-	return nullptr;
+	float binspan;
+	__host__ __device__
+	histogram_functor(float binspan) :binspan(binspan) {}
+
+	__host__ __device__
+	float operator()(float val) 
+	{
+		return floor(val / binspan);
+	}
+};
+
+std::shared_ptr<statarray> statarray::histogram(int nbins) const
+{
+	auto sorted = this->sorted();
+	thrust::device_vector<int> dbins(nbins);
+	thrust::device_vector<int> dbincounts(nbins);
+	thrust::device_vector<float> dsorted(sorted->begin(), sorted->end());
+
+	thrust::transform(dsorted.begin(), dsorted.end(), dsorted.begin(), histogram_functor((this->max() - this->min()) / this->size()));
+	thrust::reduce_by_key(dsorted.begin(), dsorted.end(), thrust::constant_iterator<int>(1), dbins.begin(), dbincounts.begin(), thrust::equal_to<int>());
+
+	auto ret = std::make_shared<statarray>();
+	ret->set_name(this->get_name().append(".histogram"));
+	ret->resize(nbins);
+	thrust::copy(dbincounts.begin(), dbincounts.end(), ret->begin());
+	return ret;
 }
 
 std::shared_ptr<polynomial> statarray::least_squares(const statarray& other) const
 {
-	//TODO: implement
-	return nullptr;
+	auto size = std::max(this->size(), other.size());
+	auto x = this->rep(size);
+	auto y = other.rep(size);
+	auto s = size;
+	auto sx = x->sum();
+	auto sy = y->sum();
+	auto sxy = (*x * *y)->sum();
+	auto sxx = (*x * *x)->sum();
+	auto syy = (*y * *y)->sum();
+	auto delta = s*sxx - sx*sx;
+
+	float a = (s*sxy - sx*sy) / delta;
+	float b = (sxx*sy - sx*sxy) / delta;
+
+	std::vector<float> coeff(2);
+	coeff[0] = b;
+	coeff[1] = a;
+
+	return std::make_shared<polynomial>(coeff);
 }
 
 void statarray::to_csv(std::string filename) const
@@ -899,8 +927,7 @@ float covariance(const statarray& v1, const statarray& v2)
 
 std::shared_ptr<polynomial> least_squares(const statarray& v1, const statarray& v2)
 {
-	//TODO: implement
-	return nullptr;
+	return v1.least_squares(v2);
 }
 
 //std::shared_ptr<statarray> statarray::transform(const statarray& v, const thrust::binary_function<float, float, float>& binary_functor) const

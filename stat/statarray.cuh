@@ -5,6 +5,22 @@
 
 #include <vector>
 
+#include "cuda_runtime.h"
+#include <cuda_runtime_api.h>
+#include "device_launch_parameters.h"
+
+#include <thrust/transform.h>
+#include <thrust/reduce.h>
+#include <thrust/device_vector.h>
+#include <thrust/host_vector.h>
+#include <thrust/functional.h>
+#include <thrust/extrema.h>
+#include <algorithm>
+#include <fstream>
+#include <curand_kernel.h>
+#include <thrust/random.h>
+#include <thrust/random/normal_distribution.h>
+
 enum sortorder
 {
 	ASC,
@@ -68,7 +84,7 @@ public:
 	std::string get_name() const { return std::string(name); }
 	void set_name(const std::string& name) { this->name = name; }
 
-	statarray() :vector() {}
+	statarray() :vector() { name = std::string(""); }
 	explicit statarray(std::string name) :vector(), name(name) {}
 	statarray(float f) :statarray() { this->push_back(f); }
 	statarray(const_iterator begin, const_iterator end) :vector(begin, end) {}
@@ -381,7 +397,7 @@ public:
 	/**
 	 * returns array's histogram with given number of bins
 	 */
-	virtual std::shared_ptr<vector<int>> histogram(int nbins) const;
+	virtual std::shared_ptr<statarray> histogram(int nbins) const;
 
 	/**
 	 * returns line specification for least squares method
